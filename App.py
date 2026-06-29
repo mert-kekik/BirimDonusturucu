@@ -111,7 +111,7 @@ st.markdown("""
 st.markdown("<div class='premium-title'>QUANTUM CONVERTER PRO</div>", unsafe_allow_html=True)
 st.markdown("<div class='premium-subtitle'>Tüm SI Temel Birimleri & Trigonometri Motoru</div>", unsafe_allow_html=True)
 
-# 4. KATEGORİ SEÇİMİ (7 SI Birimi + Geometri)
+# 4. KATEGORİ SEÇİMİ
 kategoriler = [
     "UZUNLUK (m)", "KÜTLE (kg)", "ZAMAN (s)", "ELEKTRİK AKIMI (A)", 
     "SICAKLIK (K)", "MADDE MİKTARI (mol)", "IŞIK ŞİDDETİ (cd)", 
@@ -129,11 +129,11 @@ sonuc_str = ""
 if kategori == "TRİGONOMETRİ (sin/cos/tan/cot)":
     is_trig = True
     col1, col2, col3 = st.columns([1, 1, 1])
-    with col1: deger = st.number_input("AÇI DEĞERİ", value=0.0000, format="%.4f")
+    # Burada formatı kaldırdık ki gereksiz sıfırlar görünmesin
+    with col1: deger = st.number_input("AÇI DEĞERİ", value=0.0)
     with col2: aci_birimi = st.selectbox("BİRİM", ["Derece (°)", "Radyan (rad)"])
     with col3: fonk = st.selectbox("FONKSİYON", ["Sinüs (sin)", "Kosinüs (cos)", "Tanjant (tan)", "Kotanjant (cot)"])
     
-    # Python math kütüphanesi radyan ile çalışır
     rad_deger = math.radians(deger) if aci_birimi == "Derece (°)" else deger
     
     if fonk == "Sinüs (sin)": sonuc = math.sin(rad_deger)
@@ -147,10 +147,9 @@ if kategori == "TRİGONOMETRİ (sin/cos/tan/cot)":
             is_undefined = True; sonuc_str = "Tanımsız (∞)"
         else: sonuc = 1 / math.tan(rad_deger)
         
-    to_unit_display = "" # Trigonometrik sonuçların birimi olmaz (boyutsuz)
+    to_unit_display = ""
 
 else:
-    # SI ve Diğer Birim Dönüşümleri için Arayüz
     if kategori == "UZUNLUK (m)":
         birimler = ["Metre (m)", "Kilometre (km)", "Santimetre (cm)", "Milimetre (mm)", "Mil (mi)", "İnç (in)", "Ayak (ft)"]
         carpanlar = {"Metre (m)": 1.0, "Kilometre (km)": 1000.0, "Santimetre (cm)": 0.01, "Milimetre (mm)": 0.001, "Mil (mi)": 1609.344, "İnç (in)": 0.0254, "Ayak (ft)": 0.3048}
@@ -174,28 +173,25 @@ else:
     elif kategori == "SICAKLIK (K)":
         birimler = ["Kelvin (K)", "Celsius (°C)", "Fahrenheit (°F)"]
 
-    # Standart 3 Kolonlu Arayüz
     col1, col2, col3 = st.columns([1, 1, 1])
-    with col1: deger = st.number_input("GİRİŞ DEĞERİ", value=1.0000, format="%.4f")
+    # Burada da formatı kaldırdık
+    with col1: deger = st.number_input("GİRİŞ DEĞERİ", value=1.0)
     with col2: from_unit = st.selectbox("KAYNAK", birimler)
     with col3: to_unit = st.selectbox("HEDEF", birimler)
     
     to_unit_display = to_unit.split(' ')[-1].replace("(", "").replace(")", "")
 
-    # Doğrusal Çarpan Mantığı ile Çalışanlar (Sıcaklık ve Açı hariç)
     lineer_kategoriler = ["UZUNLUK (m)", "KÜTLE (kg)", "ZAMAN (s)", "ELEKTRİK AKIMI (A)", "MADDE MİKTARI (mol)", "IŞIK ŞİDDETİ (cd)"]
     
     if kategori in lineer_kategoriler:
         baz_deger = deger * carpanlar[from_unit]
         sonuc = baz_deger / carpanlar[to_unit]
         
-    # Açı Dönüşümü Motoru
     elif kategori == "AÇI DÖNÜŞÜMÜ (rad/°)":
         if from_unit == "Derece (°)" and to_unit == "Radyan (rad)": sonuc = math.radians(deger)
         elif from_unit == "Radyan (rad)" and to_unit == "Derece (°)": sonuc = math.degrees(deger)
         else: sonuc = deger
 
-    # Sıcaklık Dönüşümü Motoru
     elif kategori == "SICAKLIK (K)":
         if from_unit == to_unit: sonuc = deger
         elif from_unit == "Celsius (°C)" and to_unit == "Fahrenheit (°F)": sonuc = (deger * 9/5) + 32
@@ -205,7 +201,7 @@ else:
         elif from_unit == "Kelvin (K)" and to_unit == "Celsius (°C)": sonuc = deger - 273.15
         elif from_unit == "Kelvin (K)" and to_unit == "Fahrenheit (°F)": sonuc = (deger - 273.15) * 9/5 + 32
 
-# 6. ÖLÇÜM CİHAZI EKRANI ÇIKTISI
+# 6. AKILLI FORMATLAMA VE ÇIKTI EKRANI
 if is_undefined:
     html_output = f"""
         <div class="result-card">
@@ -214,10 +210,18 @@ if is_undefined:
         </div>
     """
 else:
+    # --- YENİ EKLENEN AKILLI FORMATLAMA MANTIĞI ---
+    # Eğer sayı 15.0 gibi bir tam sayıysa direkt "15" yap
+    if float(sonuc).is_integer():
+        gosterilecek_sonuc = f"{int(sonuc):,}"
+    else:
+        # Değilse maksimum 6 hane göster ama sağdaki gereksiz sıfırları ve varsa boşta kalan noktayı temizle
+        gosterilecek_sonuc = f"{sonuc:,.6f}".rstrip('0').rstrip('.')
+        
     html_output = f"""
         <div class="result-card">
             <div class="result-label">{'FONKSİYON SONUCU' if is_trig else 'SİSTEM ÇIKTISI (OUTPUT)'}</div>
-            <div class="result-value">{sonuc:,.6f}<span class="result-unit">{to_unit_display}</span></div>
+            <div class="result-value">{gosterilecek_sonuc}<span class="result-unit">{to_unit_display}</span></div>
         </div>
     """
 
